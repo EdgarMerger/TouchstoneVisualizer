@@ -1,0 +1,5 @@
+matplotlib==3.10.1
+numpy==2.2.4
+PyQt6==6.8.1
+PyQt6_sip==13.10.0
+scikit_rf==1.6.2
