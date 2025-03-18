@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QFileDialog, QPushButton, QLabel, 
-    QVBoxLayout, QWidget, QCheckBox, QScrollArea, QSizePolicy
+    QVBoxLayout, QWidget, QCheckBox, QScrollArea, QSizePolicy, QTextEdit
 )
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
@@ -23,6 +23,9 @@ class TouchstoneViewer(QMainWindow):
         self.load_button = QPushButton("Open Files", self)
         self.plot_button = QPushButton("Plot S-Parameters", self)
         self.mode_checkbox = QCheckBox("Enable Mixed-Mode", self)
+        self.verify_button = QPushButton("Run Verification Checks", self)
+        self.results_display = QTextEdit()
+        self.results_display.setReadOnly(True)
 
         # Scrollable area for file selection checkboxes
         self.file_container = QWidget()
@@ -55,6 +58,8 @@ class TouchstoneViewer(QMainWindow):
         layout.addWidget(self.mode_checkbox)
         layout.addWidget(self.param_scroll_area)
         layout.addWidget(self.plot_button)
+        layout.addWidget(self.verify_button)
+        layout.addWidget(self.results_display)
         layout.addWidget(self.toolbar)  # Add Matplotlib Toolbar
         layout.addWidget(self.canvas)   # Add resizable canvas
 
@@ -66,6 +71,7 @@ class TouchstoneViewer(QMainWindow):
         self.load_button.clicked.connect(self.load_files)
         self.plot_button.clicked.connect(self.plot_s_param)
         self.mode_checkbox.stateChanged.connect(self.update_param_checkboxes)
+        self.verify_button.clicked.connect(self.run_verification_checks)
 
         self.networks = {}  # Store multiple networks {file_name: Network}
         self.mixed_mode_networks = {}  # Store Mixed-Mode networks
@@ -176,6 +182,24 @@ class TouchstoneViewer(QMainWindow):
         self.ax_phase.grid()
 
         self.canvas.draw()
+
+    def run_verification_checks(self):
+        results = "Verification Results:\n"
+        
+        for file_path, network in self.networks.items():
+            if not self.file_checkboxes[file_path].isChecked():
+                continue
+            
+            passivity = np.all(np.linalg.eigvals(network.s @ network.s.conj().T) <= 1)
+            #causality = np.all(np.diff(np.angle(network.s), axis=0) >= 0)
+            #reciprocity = np.allclose(network.s, network.s.T, atol=1e-6)
+
+            results += f"{file_path.split('/')[-1]}:\n"
+            results += f"  Passivity: {'PASS' if passivity else 'FAIL'}\n"
+            #results += f"  Causality: {'PASS' if causality else 'FAIL'}\n"
+            #results += f"  Reciprocity: {'PASS' if reciprocity else 'FAIL'}\n\n"
+        
+        self.results_display.setText(results)
 
 # Run the Application
 if __name__ == "__main__":
