@@ -23,7 +23,8 @@ class TouchstoneViewer(QMainWindow):
         self.load_button = QPushButton("Open Files", self)
         self.plot_button = QPushButton("Plot S-Parameters", self)
         self.mode_checkbox = QCheckBox("Enable Mixed-Mode", self)
-        self.verify_button = QPushButton("Run Verification Checks", self)
+        self.check_passivity_button = QPushButton("Run Passivity Check", self)
+        self.check_reciprocity_button = QPushButton("Run Reciprocity Check", self)
         self.results_display = QTextEdit()
         self.results_display.setReadOnly(True)
 
@@ -58,7 +59,8 @@ class TouchstoneViewer(QMainWindow):
         layout.addWidget(self.mode_checkbox)
         layout.addWidget(self.param_scroll_area)
         layout.addWidget(self.plot_button)
-        layout.addWidget(self.verify_button)
+        layout.addWidget(self.check_passivity_button)
+        layout.addWidget(self.check_reciprocity_button)
         layout.addWidget(self.results_display)
         layout.addWidget(self.toolbar)  # Add Matplotlib Toolbar
         layout.addWidget(self.canvas)   # Add resizable canvas
@@ -71,7 +73,8 @@ class TouchstoneViewer(QMainWindow):
         self.load_button.clicked.connect(self.load_files)
         self.plot_button.clicked.connect(self.plot_s_param)
         self.mode_checkbox.stateChanged.connect(self.update_param_checkboxes)
-        self.verify_button.clicked.connect(self.run_verification_checks)
+        self.check_passivity_button.clicked.connect(self.run_passivity_check)
+        self.check_reciprocity_button.clicked.connect(self.run_reciprocity_check)
 
         self.networks = {}  # Store multiple networks {file_name: Network}
         self.mixed_mode_networks = {}  # Store Mixed-Mode networks
@@ -183,14 +186,12 @@ class TouchstoneViewer(QMainWindow):
 
         self.canvas.draw()
 
-    def run_verification_checks(self):
-        results = "Verification Results:\n"
+    def run_passivity_check(self):
+        result = "Passivity Result:\n"
         
         for file_path, network in self.networks.items():
             if not self.file_checkboxes[file_path].isChecked():
                 continue
-            
-            #passivity = np.all(np.linalg.eigvals(network.s @ network.s.conj().T) <= 1)
 
             passivity = True  # Assume the network is passive initially
 
@@ -208,12 +209,36 @@ class TouchstoneViewer(QMainWindow):
             #reciprocity = np.allclose(network.s, network.s.T, atol=1e-6)
             #causality = np.all(np.diff(np.angle(network.s), axis=0) >= 0)
             
-            results += f"{file_path.split('/')[-1]}:\n"
-            results += f"  Passivity: {'PASS' if passivity else 'FAIL'}\n"
+            result += f"{file_path.split('/')[-1]}:\n"
+            result += f"  Passivity: {'PASS' if passivity else 'FAIL'}\n"
             #results += f"  Reciprocity: {'PASS' if reciprocity else 'FAIL'}\n\n"
             #results += f"  Causality: {'PASS' if causality else 'FAIL'}\n"
             
-        self.results_display.setText(results)
+        self.results_display.setText(result)
+
+    def run_reciprocity_check(self):
+        result = "Reciprocity Result:\n"
+        
+        for file_path, network in self.networks.items():
+            if not self.file_checkboxes[file_path].isChecked():
+                continue    
+
+            reciprocity = True  # Assume the network is reciprocal initially
+            tolerance = 1e-9   # Small numerical tolerance for floating-point errors
+
+            for f_idx in range(network.f.shape[0]):  # Iterate over all frequencies
+                s_matrix = network.s[f_idx, :, :]  # Extract S-matrix at this frequency
+
+                if not np.allclose(s_matrix, s_matrix.T, atol=tolerance):  # Check symmetry
+                    reciprocity = False
+                    print(f"Warning: Network is not reciprocal at {network.f[f_idx] / 1e9:.2f} GHz")
+                    break  # Stop checking further if reciprocity is violated
+                    
+            result += f"{file_path.split('/')[-1]}:\n"
+            result += f"  Reciprocity: {'PASS' if reciprocity else 'FAIL'}\n\n"
+            #results += f"  Causality: {'PASS' if causality else 'FAIL'}\n"
+            
+        self.results_display.setText(result)
 
 # Run the Application
 if __name__ == "__main__":
