@@ -190,15 +190,29 @@ class TouchstoneViewer(QMainWindow):
             if not self.file_checkboxes[file_path].isChecked():
                 continue
             
-            passivity = np.all(np.linalg.eigvals(network.s @ network.s.conj().T) <= 1)
-            #causality = np.all(np.diff(np.angle(network.s), axis=0) >= 0)
-            #reciprocity = np.allclose(network.s, network.s.T, atol=1e-6)
+            #passivity = np.all(np.linalg.eigvals(network.s @ network.s.conj().T) <= 1)
 
+            passivity = True  # Assume the network is passive initially
+
+            for f_idx in range(network.f.shape[0]):  # Iterate over each frequency
+                s_matrix = network.s[f_idx, :, :]  # Extract S-matrix at this frequency
+                power_matrix = s_matrix @ s_matrix.conj().T  # Compute P = S * S^H
+                eigenvalues = np.linalg.eigvals(power_matrix)  # Get eigenvalues
+
+            if np.any(eigenvalues > 1):  # If any eigenvalue > 1, passivity is violated
+                passivity = False
+                print(f"Warning: Network is not passive at {network.f[f_idx] / 1e9:.2f} GHz")
+                break  # No need to check further if passivity is already violated
+
+
+            #reciprocity = np.allclose(network.s, network.s.T, atol=1e-6)
+            #causality = np.all(np.diff(np.angle(network.s), axis=0) >= 0)
+            
             results += f"{file_path.split('/')[-1]}:\n"
             results += f"  Passivity: {'PASS' if passivity else 'FAIL'}\n"
-            #results += f"  Causality: {'PASS' if causality else 'FAIL'}\n"
             #results += f"  Reciprocity: {'PASS' if reciprocity else 'FAIL'}\n\n"
-        
+            #results += f"  Causality: {'PASS' if causality else 'FAIL'}\n"
+            
         self.results_display.setText(results)
 
 # Run the Application
