@@ -22,8 +22,10 @@ class TouchstoneViewer(QMainWindow):
         self.label = QLabel("Load Touchstone Files:", self)
         self.load_button = QPushButton("Open Files", self)
         self.plot_button = QPushButton("Plot S-Parameters", self)
+        self.time_plot_button = QPushButton("Plot TDR (beta)", self)
         self.mode_checkbox = QCheckBox("Enable Mixed-Mode", self)
         self.check_passivity_button = QPushButton("Run Passivity Check", self)
+        self.check_causality_button = QPushButton("Run Causality Check", self)
         self.check_reciprocity_button = QPushButton("Run Reciprocity Check", self)
         self.results_display = QTextEdit()
         self.results_display.setReadOnly(True)
@@ -59,7 +61,9 @@ class TouchstoneViewer(QMainWindow):
         layout.addWidget(self.mode_checkbox)
         layout.addWidget(self.param_scroll_area)
         layout.addWidget(self.plot_button)
+        layout.addWidget(self.time_plot_button)
         layout.addWidget(self.check_passivity_button)
+        layout.addWidget(self.check_causality_button)
         layout.addWidget(self.check_reciprocity_button)
         layout.addWidget(self.results_display)
         layout.addWidget(self.toolbar)  # Add Matplotlib Toolbar
@@ -72,8 +76,10 @@ class TouchstoneViewer(QMainWindow):
         # Connections
         self.load_button.clicked.connect(self.load_files)
         self.plot_button.clicked.connect(self.plot_s_param)
+        self.time_plot_button.clicked.connect(self.plot_tdr)  # New Function
         self.mode_checkbox.stateChanged.connect(self.update_param_checkboxes)
         self.check_passivity_button.clicked.connect(self.run_passivity_check)
+        self.check_causality_button.clicked.connect(self.run_causality_check)
         self.check_reciprocity_button.clicked.connect(self.run_reciprocity_check)
 
         self.networks = {}  # Store multiple networks {file_name: Network}
@@ -186,6 +192,46 @@ class TouchstoneViewer(QMainWindow):
 
         self.canvas.draw()
 
+    def plot_tdr(self):
+        enabled_files = [f for f, cb in self.file_checkboxes.items() if cb.isChecked()]
+        if not enabled_files:
+            self.label.setText("Select at least one file!")
+            return
+
+        fig, ax = plt.subplots(figsize=(8, 4))
+
+        for file_path in enabled_files:
+            network = self.networks[file_path]
+            freqs = network.f  # Frequency points
+            N_freq = len(freqs)
+            dt = 1 / (N_freq * (freqs[1] - freqs[0]))  # Time resolution
+            time = np.arange(N_freq) * dt  # Time vector
+
+            # Select S11 for TDR (Reflection)
+            s11_freq = network.s[:, 0, 0]  # S11 frequency response
+
+            # Apply a window function to reduce spectral leakage
+            window = np.hanning(N_freq)
+            s11_freq = s11_freq * window
+
+            # Compute impulse response (TDR response) using IFFT
+            tdr_response = np.fft.ifft(s11_freq)
+
+            # Compute impedance profile assuming characteristic impedance of 50 Ohms
+            Z0 = 50  # Reference impedance
+            tdr_impedance = Z0 * (1 + np.abs(tdr_response)) / (1 - np.abs(tdr_response))
+
+            # Plot the impedance profile
+            ax.plot(time * 1e9, tdr_impedance, label=f"TDR - {file_path.split('/')[-1]}")
+
+        ax.set_xlabel("Time (ns)")
+        ax.set_ylabel("Impedance (Ohms)")
+        ax.set_title("TDR Impedance Profile")
+        ax.legend()
+        ax.grid()
+        plt.show()
+
+
     def run_passivity_check(self):
         result = "Passivity Result:\n"
         
@@ -210,39 +256,24 @@ class TouchstoneViewer(QMainWindow):
             #causality = np.all(np.diff(np.angle(network.s), axis=0) >= 0)
             
             result += f"{file_path.split('/')[-1]}:\n"
-            result += f"  Passivity: {'PASS' if passivity else 'FAIL'}\n"
+            result += f"  Passivity: {'✅ PASS' if passivity else '❌ FAIL'}\n"
             
         self.results_display.setText(result)
 
-    def run_reciprocity_check(self):
-        result = "Reciprocity Result:\n"
+    def run_causality_check(self):
+        result = "Causality Result:\n"
         
         for file_path, network in self.networks.items():
             if not self.file_checkboxes[file_path].isChecked():
                 continue    
-            
-            result += f"{file_path.split('/')[-1]}:\n"
+           
+            causality = True  # Assume the network is reciprocal initially
+            s_matrix = network.s
+            s_time = np.fft.ifft(s_matrix, axis=0)
+            causality = np.all(np.real(s_time[0]) >= 0)
 
-            reciprocity = True  # Assume the network is reciprocal initially
-            tolerance = 1e-2   # Small numerical tolerance for floating-point errors
-
-            for f_idx in range(network.f.shape[0]):  # Iterate over all frequencies
-                s_matrix = network.s[f_idx, :, :]  # Extract S-matrix at this frequency
-
-                #boolean_array = np.isclose(s_matrix, s_matrix.T, atol=tolerance)
-                #pass
-
-                if not np.allclose(s_matrix, s_matrix.T, atol=tolerance):  # Check symmetry
-                    reciprocity = False
-                    print(f"Warning: Network is not reciprocal at {network.f[f_idx] / 1e9:.2f} GHz")
-                    diff = self.abs_diff(s_matrix, s_matrix.T)
-                    result += f"Warning: Network is not reciprocal at {network.f[f_idx] / 1e9:.2f} GHz\n"
-                    result += f"The difference in S-Parameter Matrix is as follows:\n"
-                    result += f"{diff}\n\n"
-                    #break  # Stop checking further if reciprocity is violated
-
-            result += f"  Reciprocity: {'PASS' if reciprocity else 'FAIL'}\n\n"
-            #results += f"  Causality: {'PASS' if causality else 'FAIL'}\n"
+            result += f"{file_path.split('/')[-1]}:\n"            
+            result += f"Causality: {'✅ Pass' if causality else '❌ Fail'}\n"
             
         self.results_display.setText(result)
 
@@ -261,7 +292,32 @@ class TouchstoneViewer(QMainWindow):
         """
         return np.abs(a - b)
 
+    def run_reciprocity_check(self):
+        result = "Reciprocity Result:\n"
+        
+        for file_path, network in self.networks.items():
+            if not self.file_checkboxes[file_path].isChecked():
+                continue    
+            
+            result += f"{file_path.split('/')[-1]}:\n"
 
+            reciprocity = True  # Assume the network is reciprocal initially
+            tolerance = 1e-2   # Small numerical tolerance for floating-point errors
+
+            for f_idx in range(network.f.shape[0]):  # Iterate over all frequencies
+                s_matrix = network.s[f_idx, :, :]  # Extract S-matrix at this frequency
+
+                if not np.allclose(s_matrix, s_matrix.T, atol=tolerance):  # Check symmetry
+                    reciprocity = False
+                    print(f"Warning: Network is not reciprocal at {network.f[f_idx] / 1e9:.2f} GHz")
+                    diff = self.abs_diff(s_matrix, s_matrix.T)
+                    result += f"Warning: Network is not reciprocal at {network.f[f_idx] / 1e9:.2f} GHz\n"
+                    result += f"The difference in S-Parameter Matrix is as follows:\n"
+                    result += f"{diff}\n\n"
+
+            result += f"  Reciprocity: {'✅ PASS' if reciprocity else '❌ FAIL'}\n\n"
+            
+        self.results_display.setText(result)
 
 # Run the Application
 if __name__ == "__main__":
