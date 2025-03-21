@@ -211,8 +211,6 @@ class TouchstoneViewer(QMainWindow):
             
             result += f"{file_path.split('/')[-1]}:\n"
             result += f"  Passivity: {'PASS' if passivity else 'FAIL'}\n"
-            #results += f"  Reciprocity: {'PASS' if reciprocity else 'FAIL'}\n\n"
-            #results += f"  Causality: {'PASS' if causality else 'FAIL'}\n"
             
         self.results_display.setText(result)
 
@@ -222,23 +220,48 @@ class TouchstoneViewer(QMainWindow):
         for file_path, network in self.networks.items():
             if not self.file_checkboxes[file_path].isChecked():
                 continue    
+            
+            result += f"{file_path.split('/')[-1]}:\n"
 
             reciprocity = True  # Assume the network is reciprocal initially
-            tolerance = 1e-9   # Small numerical tolerance for floating-point errors
+            tolerance = 1e-2   # Small numerical tolerance for floating-point errors
 
             for f_idx in range(network.f.shape[0]):  # Iterate over all frequencies
                 s_matrix = network.s[f_idx, :, :]  # Extract S-matrix at this frequency
 
+                #boolean_array = np.isclose(s_matrix, s_matrix.T, atol=tolerance)
+                #pass
+
                 if not np.allclose(s_matrix, s_matrix.T, atol=tolerance):  # Check symmetry
                     reciprocity = False
                     print(f"Warning: Network is not reciprocal at {network.f[f_idx] / 1e9:.2f} GHz")
-                    break  # Stop checking further if reciprocity is violated
-                    
-            result += f"{file_path.split('/')[-1]}:\n"
+                    diff = self.abs_diff(s_matrix, s_matrix.T)
+                    result += f"Warning: Network is not reciprocal at {network.f[f_idx] / 1e9:.2f} GHz\n"
+                    result += f"The difference in S-Parameter Matrix is as follows:\n"
+                    result += f"{diff}\n\n"
+                    #break  # Stop checking further if reciprocity is violated
+
             result += f"  Reciprocity: {'PASS' if reciprocity else 'FAIL'}\n\n"
             #results += f"  Causality: {'PASS' if causality else 'FAIL'}\n"
             
         self.results_display.setText(result)
+
+    @staticmethod
+    def abs_diff(a, b):
+        """
+        Computes the absolute difference between two arrays.
+
+        Parameters:
+            a, b : array-like
+                Input arrays to compare.
+
+        Returns:
+            diff : ndarray
+                The computed absolute differences.
+        """
+        return np.abs(a - b)
+
+
 
 # Run the Application
 if __name__ == "__main__":

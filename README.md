@@ -47,6 +47,18 @@ python touchstone_viewer.py
 
 ![GUI](images/GUI.jpg)
 
+
+### Run S-Parameter Checks
+1. Select desired S-parameters using checkboxes.
+2. Click **"Run Passivity Check"** to check for Passivity of the network according to:
+![Passivity Check](images/Passivity_Check.png)
+
+3. Click **"Run Causality Check"** to check for Causality of the network according to:
+![Causality Check](images/Causality_Check.png)
+
+4. Click **"Run Reciprocity Check"** to check for Reciprocity of the network according to:
+![Reciprocity Check](images/Reciprocity_Check.png)
+
 ### Create a Standalone Executable
 To build an `.exe` file:
 ```sh
