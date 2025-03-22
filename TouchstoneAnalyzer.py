@@ -183,6 +183,9 @@ class TouchstoneViewer(QMainWindow):
         self.ax_mag.set_title("S-Parameter Magnitude")
         self.ax_mag.legend()
         self.ax_mag.grid()
+        
+        # Unhide phase plot since it's again needed for S-Parameters
+        self.ax_phase.set_visible(True)
 
         self.ax_phase.set_xlabel("Frequency (GHz)")
         self.ax_phase.set_ylabel("Phase (degrees)")
@@ -192,44 +195,82 @@ class TouchstoneViewer(QMainWindow):
 
         self.canvas.draw()
 
+
     def plot_tdr(self):
         enabled_files = [f for f, cb in self.file_checkboxes.items() if cb.isChecked()]
         if not enabled_files:
             self.label.setText("Select at least one file!")
             return
 
-        fig, ax = plt.subplots(figsize=(8, 4))
+        # Clear previous plots
+        self.ax_mag.clear()
+        self.ax_phase.clear()
+
+        mixed_mode_enabled = self.mode_checkbox.isChecked()
 
         for file_path in enabled_files:
             network = self.networks[file_path]
             freqs = network.f  # Frequency points
             N_freq = len(freqs)
-            dt = 1 / (N_freq * (freqs[1] - freqs[0]))  # Time resolution
-            time = np.arange(N_freq) * dt  # Time vector
 
-            # Select S11 for TDR (Reflection)
-            s11_freq = network.s[:, 0, 0]  # S11 frequency response
+            if N_freq < 2:
+                self.label.setText(f"Not enough frequency points in {file_path} for TDR calculation!")
+                continue
 
-            # Apply a window function to reduce spectral leakage
-            window = np.hanning(N_freq)
-            s11_freq = s11_freq * window
+            df = freqs[1] - freqs[0]  # Frequency step
+            dt = 1 / (2 * df * N_freq)  # Time resolution
+            time = np.fft.fftfreq(N_freq, d=df)  # Time vector
+            time_ns = time * 1e9  # Convert to nanoseconds
 
-            # Compute impulse response (TDR response) using IFFT
-            tdr_response = np.fft.ifft(s11_freq)
+            if mixed_mode_enabled and network.number_of_ports == 4:
+                # Convert single-ended to mixed-mode parameters
+                if file_path not in self.mixed_mode_networks:
+                    mixed_mode_network = rf.Network(file_path)
+                    mixed_mode_network.se2gmm(p=2)  # Convert 4-port SE to Mixed-Mode
+                    self.mixed_mode_networks[file_path] = mixed_mode_network
+                else:
+                    mixed_mode_network = self.mixed_mode_networks[file_path]
 
-            # Compute impedance profile assuming characteristic impedance of 50 Ohms
-            Z0 = 50  # Reference impedance
-            tdr_impedance = Z0 * (1 + np.abs(tdr_response)) / (1 - np.abs(tdr_response))
+                # Extract Mixed-Mode S-Parameters
+                s_dd11 = mixed_mode_network.s[:, 0, 0]  # Differential Reflection
+                s_cc11 = mixed_mode_network.s[:, 2, 2]  # Common-Mode Reflection
+                selected_modes = {"S_dd11": s_dd11, "S_cc11": s_cc11}
+            else:
+                # Single-Ended S11
+                selected_modes = {"S11": network.s[:, 0, 0]}
 
-            # Plot the impedance profile
-            ax.plot(time * 1e9, tdr_impedance, label=f"TDR - {file_path.split('/')[-1]}")
+            for mode, s_freq in selected_modes.items():
+                # Apply window function (Hamming) to reduce spectral leakage
+                window = np.hamming(N_freq)
+                s_freq = s_freq * window
 
-        ax.set_xlabel("Time (ns)")
-        ax.set_ylabel("Impedance (Ohms)")
-        ax.set_title("TDR Impedance Profile")
-        ax.legend()
-        ax.grid()
-        plt.show()
+                # Compute TDR response using IFFT
+                tdr_response = np.fft.ifft(s_freq)
+
+                # Compute impedance profile assuming Z0 = 50 Ohms
+                Z0 = 50
+                tdr_impedance = Z0 * (1 + np.abs(tdr_response)) / (1 - np.abs(tdr_response))
+
+                # Keep only positive time values
+                positive_time = time_ns[:N_freq // 2]
+                positive_impedance = tdr_impedance[:N_freq // 2]
+
+                # Plot on the existing canvas
+                self.ax_mag.plot(positive_time, positive_impedance, label=f"TDR {mode} - {file_path.split('/')[-1]}")
+
+        # Update labels for TDR
+        self.ax_mag.set_xlabel("Time (ns)")
+        self.ax_mag.set_ylabel("Impedance (Ohms)")
+        self.ax_mag.set_title("TDR Impedance Profile")
+        self.ax_mag.legend()
+        self.ax_mag.grid(True)
+
+        # Hide phase plot since it's not needed for TDR
+        self.ax_phase.set_visible(False)
+
+        # Refresh the canvas
+        self.canvas.draw()
+
 
 
     def run_passivity_check(self):
