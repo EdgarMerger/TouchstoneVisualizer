@@ -221,18 +221,17 @@ class TouchstoneViewer(QMainWindow):
                     mixed_mode_network = self.mixed_mode_networks[file_path]
 
                 selected_modes = {"S_dd11": mixed_mode_network.s11, "S_cc11": mixed_mode_network.s33}
+                mixed_mode_network_dc = mixed_mode_network.extrapolate_to_dc(kind='linear')
+                plt.title("Time Domain Reflectometry Mixed-Mode")
+                mixed_mode_network_dc.s11.plot_z_time_step(window='hamming', label="impedance "+ file_path.split('/')[-1])
+                plt.xlim((-0.5, 20))
             else:
                 selected_modes = {"S11": network.s11}
-
-            for mode, s_freq in selected_modes.items():
                 # Extrapolate to DC for a more realistic TDR response
                 network_dc = network.extrapolate_to_dc(kind='linear')
-                # Set Port 1 as open (reflection coefficient = 1)
-                #network_dc.s[:, 1:, 1:] = 1  # Set S22, S33, S44 to 1 for open ports
-
-            plt.title("Time Domain Reflectometry")
-            network_dc.s11.plot_z_time_step(window='hamming', label="impedance "+ file_path.split('/')[-1])
-            plt.xlim((-0.5, 10))
+                plt.title("Time Domain Reflectometry")
+                network_dc.s11.plot_z_time_step(window='hamming', label="impedance "+ file_path.split('/')[-1])
+                plt.xlim((-0.5, 20))
 
             plt.tight_layout()
             plt.show()

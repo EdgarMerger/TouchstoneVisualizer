@@ -6,6 +6,20 @@ The **Touchstone Viewer** is a GUI-based tool for visualizing S-parameter files 
 - Load multiple Touchstone files simultaneously.
 - Enable/disable specific files for plotting.
 - Toggle between standard and mixed-mode S-parameters.
+  
+  Port Numbering Convention:
+  ```
+    Single Ended 4-port                           Differential 2-port
+          _________                                 
+         |         |                                
+    1 ___|   -->   |___3                               _________
+         |         |           translates into        |         |
+    2 ___|   -->   |___4                           1--|   -->   |--2
+         |         |                                  |_________|
+         |_________|
+  ```
+
+
 - Interactively resize the Matplotlib canvas.
 - Export plotted data for further analysis.
 - Generate an executable version for standalone use.
@@ -38,7 +52,7 @@ python touchstone_viewer.py
 ### Load S-Parameter Files
 1. Click **"Open File"** and select one or more `.s2p` or `.s4p` files.
 2. Use the checkboxes to enable/disable specific files.
-3. If applicable, check **"Enable Mixed-Mode"** for 4-port networks.
+3. If applicable, check **"Enable Mixed-Mode"** for 4-port networks. 
 
 ### Plot S-Parameters
 1. Select desired S-parameters using checkboxes.
@@ -86,11 +100,16 @@ This generates an executable in the `dist/` folder.
   ```
 - **Plot labels cut off?** Ensure the window is resized properly.
 
+## Contributions
+For issues or feature requests, feel free to contribute by **pull requests**!
+
 ## License
-This project is licensed under the MIT License.
+This project is licensed under the GNU **General Public License (GPL)** – you are free to use, modify, and distribute it, but any derivative work must also be open-source under the same license.
 
-## Author
-Developed by Edgar Merger.
+## About Author
+Ey, I am Edgar👋🏼
 
-For issues or feature requests, feel free to contribute!
+I’m an electronics designer and with 15+ years of experience in companies across automotive, industrial, medical, and IoT sectors. Ever since I was interested in computers and finally let my passion come true by becoming a Motherboard Designer. I created x86 and ARM based motherboards with AMD, Intel and Nvidia Chipsets. During that time I specialized in Signal and Power Integrity. 
 
+### Where to find me?
+[Linkedin](https://de.linkedin.com/in/edgar-merger-09704411a)
