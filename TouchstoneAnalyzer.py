@@ -55,6 +55,7 @@ class TouchstoneViewer(QMainWindow):
         self.canvas.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.canvas.updateGeometry()
 
+
         # Layout
         layout = QVBoxLayout()
         layout.addWidget(self.label)
@@ -203,39 +204,38 @@ class TouchstoneViewer(QMainWindow):
         if not enabled_files:
             self.label.setText("Select at least one file!")
             return
-        
-        
-        # Clear previous plots
-        self.ax_mag.clear()
-        self.ax_phase.clear()
 
         mixed_mode_enabled = self.mode_checkbox.isChecked()
 
+        plt.figure()
+
         for file_path in enabled_files:
             network = self.networks[file_path]
-            network_dc = network.extrapolate_to_dc(kind='linear')
-            network_dc.s11.plot_z_time_step(window='hamming', label="impedance")
 
-            plt.figure()
+            if mixed_mode_enabled and network.number_of_ports == 4:
+                if file_path not in self.mixed_mode_networks:
+                    mixed_mode_network = rf.Network(file_path)
+                    mixed_mode_network.se2gmm(p=2)  # Convert to Mixed-Mode
+                    self.mixed_mode_networks[file_path] = mixed_mode_network
+                else:
+                    mixed_mode_network = self.mixed_mode_networks[file_path]
+
+                selected_modes = {"S_dd11": mixed_mode_network.s11, "S_cc11": mixed_mode_network.s33}
+            else:
+                selected_modes = {"S11": network.s11}
+
+            for mode, s_freq in selected_modes.items():
+                # Extrapolate to DC for a more realistic TDR response
+                network_dc = network.extrapolate_to_dc(kind='linear')
+                # Set Port 1 as open (reflection coefficient = 1)
+                #network_dc.s[:, 1:, 1:] = 1  # Set S22, S33, S44 to 1 for open ports
+
             plt.title("Time Domain Reflectometry")
-            network_dc.s11.plot_z_time_step(window='hamming', label="impedance")
+            network_dc.s11.plot_z_time_step(window='hamming', label="impedance "+ file_path.split('/')[-1])
             plt.xlim((-0.5, 10))
 
             plt.tight_layout()
             plt.show()
-
-        # Update labels for TDR
-        #self.ax_mag.set_xlabel("Time (ns)")
-        #self.ax_mag.set_ylabel("Impedance (Ohms)")
-        #self.ax_mag.set_title("TDR Impedance Profile with Open Ports")
-        #self.ax_mag.legend()
-        #self.ax_mag.grid(True)
-
-        # Hide phase plot since it's not needed for TDR
-        #self.ax_phase.set_visible(False)
-
-        # Refresh the canvas
-        #self.canvas.draw()
 
 
     def run_passivity_check(self):
