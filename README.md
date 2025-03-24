@@ -47,17 +47,26 @@ python touchstone_viewer.py
 
 ![GUI](images/GUI.jpg)
 
+### Plot TDR
+1. Select desired S-parameters using checkboxes.
+2. Click **"Plot TDR** to visualize the data.
+3. Resize the plot interactively using the mouse.
+
+![TDR](images/TDR.jpg)
+
 
 ### Run S-Parameter Checks
 1. Select desired S-parameters using checkboxes.
-2. Click **"Run Passivity Check"** to check for Passivity of the network according to:
-![Passivity Check](images/Passivity_Check.png)
+2. Click **"Run Passivity Check"** to check for Passivity of the network
+   - Ensures that the network doe not generate energy, meaning no S-Parameter magnitued should exceed 1 (0 dB)
+   - This check is crucial for passive components like filters, attenuator and cables.
 
-3. Click **"Run Causality Check"** to check for Causality of the network according to:
-![Causality Check](images/Causality_Check.png)
+3. Click **"Run Causality Check"** to check for Causality of the network
+   - Ensures that future signals do not influence past signals (i.e. real-world behaviour)
+   - A non-causal response suggests incorrect time-domain beahavior, such as truncation artifacts in frequency-domain measurements.
 
 4. Click **"Run Reciprocity Check"** to check for Reciprocity of the network according to:
-![Reciprocity Check](images/Reciprocity_Check.png)
+   - Ensures that the network behaves the same in both directions (common for passive reciprocal devices like cables, filters and antennas)
 
 ### Create a Standalone Executable
 To build an `.exe` file:
