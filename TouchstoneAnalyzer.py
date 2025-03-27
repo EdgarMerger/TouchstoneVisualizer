@@ -11,8 +11,6 @@ from matplotlib.backends.backend_qt5agg import (
     NavigationToolbar2QT as NavigationToolbar
 )
 
-rf.stylely()
-
 class TouchstoneViewer(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -47,7 +45,8 @@ class TouchstoneViewer(QMainWindow):
         self.param_scroll_area.setWidget(self.param_container)
 
         # Matplotlib Canvas & Toolbar
-        self.figure, (self.ax_mag, self.ax_phase) = plt.subplots(2, 1, figsize=(8, 6), sharex=True)
+        self.figure, (self.ax_mag, self.ax_phase, self.ax_tdr) = plt.subplots(3, 1, figsize=(8, 8), sharex=False)
+
         self.canvas = FigureCanvas(self.figure)
         self.toolbar = NavigationToolbar(self.canvas, self)
 
@@ -207,7 +206,13 @@ class TouchstoneViewer(QMainWindow):
 
         mixed_mode_enabled = self.mode_checkbox.isChecked()
 
-        plt.figure()
+        # Clear only the TDR axis to keep S-parameter plots intact
+        self.ax_tdr.clear()
+        
+        self.ax_tdr.set_title("Time Domain Reflectometry (TDR)")
+        self.ax_tdr.set_xlabel("Time (ns)")
+        self.ax_tdr.set_ylabel("Impedance (Ω)")
+        self.ax_tdr.grid()
 
         for file_path in enabled_files:
             network = self.networks[file_path]
@@ -223,19 +228,15 @@ class TouchstoneViewer(QMainWindow):
                 selected_modes = {"S_dd11": mixed_mode_network.s11, "S_cc11": mixed_mode_network.s33}
                 mixed_mode_network_dc = mixed_mode_network.extrapolate_to_dc(kind='linear')
                 plt.title("Time Domain Reflectometry Mixed-Mode")
-                mixed_mode_network_dc.s11.plot_z_time_step(window='hamming', label="impedance "+ file_path.split('/')[-1])
-                plt.xlim((-0.5, 20))
+                mixed_mode_network_dc.s11.plot_z_time_step(ax = self.ax_tdr, window='hamming', label="impedance "+ file_path.split('/')[-1])
+                plt.xlim((-1, 20))
             else:
                 selected_modes = {"S11": network.s11}
                 # Extrapolate to DC for a more realistic TDR response
                 network_dc = network.extrapolate_to_dc(kind='linear')
-                plt.title("Time Domain Reflectometry")
-                network_dc.s11.plot_z_time_step(window='hamming', label="impedance "+ file_path.split('/')[-1])
-                plt.xlim((-0.5, 20))
-
-            plt.tight_layout()
-            plt.show()
-
+                network_dc.s11.plot_z_time_step(ax = self.ax_tdr, window='hamming', label="impedance "+ file_path.split('/')[-1])
+        
+        self.canvas.draw() 
 
     def run_passivity_check(self):
         result = "Passivity Result:\n"
