@@ -85,7 +85,7 @@ python touchstone_viewer.py
 ### Create a Standalone Executable
 To build an `.exe` file:
 ```sh
-pyinstaller --onefile --windowed --name TouchstoneAnalyzer ./TouchstoneAnalyzer.py
+pyinstaller --onefile --windowed --name TouchstoneVisualizer ./TouchstoneAnalyzer.py
 ```
 This generates an executable in the `dist/` folder.
 
