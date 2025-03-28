@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QFileDialog, QPushButton, QLabel, 
-    QVBoxLayout, QWidget, QCheckBox, QScrollArea, QSizePolicy, QTextEdit
+    QVBoxLayout, QHBoxLayout, QSplitter, QWidget, QCheckBox, QScrollArea, QSizePolicy, QTextEdit
 )
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
@@ -54,25 +54,47 @@ class TouchstoneViewer(QMainWindow):
         self.canvas.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.canvas.updateGeometry()
 
+        # === Layout Adjustments ===
+        # Left Panel (Controls)
+        left_panel = QWidget()
+        left_layout = QVBoxLayout(left_panel)
 
-        # Layout
-        layout = QVBoxLayout()
-        layout.addWidget(self.label)
-        layout.addWidget(self.load_button)
-        layout.addWidget(self.file_scroll_area)
-        layout.addWidget(self.mode_checkbox)
-        layout.addWidget(self.param_scroll_area)
-        layout.addWidget(self.plot_button)
-        layout.addWidget(self.time_plot_button)
-        layout.addWidget(self.check_passivity_button)
-        layout.addWidget(self.check_causality_button)
-        layout.addWidget(self.check_reciprocity_button)
-        layout.addWidget(self.results_display)
-        layout.addWidget(self.toolbar)  # Add Matplotlib Toolbar
-        layout.addWidget(self.canvas)   # Add resizable canvas
+        left_layout.addWidget(self.label)
+        left_layout.addWidget(self.load_button)
+        left_layout.addWidget(self.file_scroll_area)
+        left_layout.addWidget(self.mode_checkbox)
+        left_layout.addWidget(self.param_scroll_area)
+        left_layout.addWidget(self.plot_button)
+        left_layout.addWidget(self.time_plot_button)
+        left_layout.addWidget(self.check_passivity_button)
+        left_layout.addWidget(self.check_causality_button)
+        left_layout.addWidget(self.check_reciprocity_button)
+        left_layout.addWidget(self.results_display)
 
+        # Right Panel (Canvas)
+        right_panel = QWidget()
+        right_layout = QVBoxLayout(right_panel)
+        right_layout.addWidget(self.toolbar)  
+        right_layout.addWidget(self.canvas)
+    
+        # Ensure the canvas takes more space
+        right_layout.setStretch(0, 1)  # Toolbar takes less space
+        right_layout.setStretch(1, 6)  # Canvas takes more space
+
+        # Create a resizable Splitter
+        splitter = QSplitter()
+        splitter.addWidget(left_panel)
+        splitter.addWidget(right_panel)
+        splitter.setStretchFactor(0, 1)  # Controls take less space
+        splitter.setStretchFactor(1, 3)  # Canvas takes more space
+
+        # Main Layout
+        main_layout = QHBoxLayout()
+        main_layout.addWidget(splitter)
+
+        # Set Main Widget
         container = QWidget()
-        container.setLayout(layout)
+        container.setLayout(main_layout)
         self.setCentralWidget(container)
 
         # Connections
