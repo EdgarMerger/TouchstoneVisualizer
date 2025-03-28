@@ -1,7 +1,7 @@
-# Touchstone Viewer
+# Touchstone Visualizer
 
 ## Overview
-The **Touchstone Viewer** is a GUI-based tool for visualizing S-parameter files (.s2p, .s4p) using **scikit-rf** and **PyQt6**. It allows users to:
+The **Touchstone Visualizer** is a GUI-based tool for visualizing S-parameter files (.s2p, .s4p) using **scikit-rf** and **PyQt6**. It allows users to:
 
 - Load multiple Touchstone files simultaneously.
 - Enable/disable specific files for plotting.
@@ -84,7 +84,7 @@ python touchstone_viewer.py
 ### Create a Standalone Executable
 To build an `.exe` file:
 ```sh
-pyinstaller --onefile --windowed --name TouchstoneVisualizer ./TouchstoneAnalyzer.py
+pyinstaller --onefile --windowed --name TouchstoneVisualizer ./TouchstoneVisualizer.py
 ```
 This generates an executable in the `dist/` folder.
 
