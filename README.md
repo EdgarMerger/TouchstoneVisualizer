@@ -62,8 +62,7 @@ python touchstone_viewer.py
 ![GUI](images/GUI.jpg)
 
 ### Plot TDR
-1. Select desired S-parameters using checkboxes.
-2. Click **"Plot TDR** to visualize the data.
+1. Click **"Plot TDR** to visualize the data. It will visualize S11 for Single Ended and SDD11 for Mixed Mode.
 3. Resize the plot interactively using the mouse.
 
 ![TDR](images/TDR.jpg)
